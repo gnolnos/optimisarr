@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- A Windows sidecar's scratch folder no longer has to live on the system drive, and can live on a
+  RAM drive. Where jobs write their source and candidate is read at service start from a durable
+  override file (`C:\ProgramData\Optimisarr\Sidecar\work-location`) first, then the same
+  `OPTIMISARR_SIDECAR_WORK` environment variable the Linux worker honours, then the old default. A
+  blank or bare-root entry is ignored rather than trusted, so a bad override never throws scratch
+  back onto `C:` by accident. Windows has no OS RAM filesystem, so RAM scratch means mounting a RAM
+  drive and pointing the work location at it: the volume's size bounds it, and the server only
+  offers jobs this worker has room for, so nothing overflows into swap.
+
 - Encode on AMD GPUs. A Windows (and Linux) sidecar that proves an AMD AMF encoder can now use it: AMF is a first-class encoder family — a new **AMD AMF** encoder mode, and Auto mode preferring it after NVIDIA and before Intel QSV. Quality maps onto AMF's constant-QP control (-rc cqp) with the same conservative headroom as the other hardware encoders, and the portable Fast/Balanced/Efficient effort resolves to AMF's speed/default/quality presets. AMD AMF encoders no longer fall out of a worker's proved capabilities because the control plane didn't recognise them. H.264 and HEVC (8- and 10-bit) are supported; AV1 AMF stays off for RDNA2 hardware that cannot encode it. Recommended for a first-run AMD box, and it does not turn hardware decode on for AMF jobs, which still encode from system-memory frames. The Windows sidecar's FFmpeg bundle now also refuses to install unless it ships the AMF encoders.
 
 ## 0.2.26 - 2026-11-20
