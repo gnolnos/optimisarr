@@ -206,12 +206,52 @@ public static class Program
     /// How many jobs this machine will take at once. Configurable so a Windows box with both a
     /// discrete GPU and an iGPU can fill them both; clamped to the same safe range the Linux and
     /// macOS workers enforce, so a typo cannot offer the server more concurrency than the machine
-    /// (or this worker) can hold.
+    /// (or this worker) can hold. Read from a durable override file the tray writes, then the
+    /// environment variable, so the tray can set it without elevation or PATH fiddling.
     /// </summary>
     internal static int ConfiguredConcurrency()
     {
-        var text = Environment.GetEnvironmentVariable("OPTIMISARR_SIDECAR_CONCURRENCY");
-        return text is not null && int.TryParse(text, out var value) ? Math.Clamp(value, 1, 4) : 1;
+        var fromFile = ReadOverrideFile("concurrency");
+        if (TryParseConcurrency(fromFile, out var fileValue))
+        {
+            return fileValue;
+        }
+
+        return TryParseConcurrency(
+            Environment.GetEnvironmentVariable("OPTIMISARR_SIDECAR_CONCURRENCY"), out var envValue)
+            ? envValue : 1;
+    }
+
+    private static bool TryParseConcurrency(string? text, out int value)
+    {
+        value = 0;
+        if (text is null || !int.TryParse(text, out var parsed))
+        {
+            return false;
+        }
+
+        if (parsed is < 1 or > 4)
+        {
+            return false;
+        }
+
+        value = parsed;
+        return true;
+    }
+
+    private static string? ReadOverrideFile(string name)
+    {
+        var path = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "Optimisarr", "Sidecar", name);
+        try
+        {
+            return File.Exists(path) ? File.ReadAllText(path).Trim() : null;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            return null; // unreadable override defers to the environment knob.
+        }
     }
 
     /// <summary>
