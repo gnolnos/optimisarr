@@ -275,7 +275,8 @@ app.Use(async (context, next) =>
         return;
     }
 
-    if (AdminTokenAuth.IsAuthorized(context.Request, adminToken!))
+    if (AdminTokenAuth.IsAuthorized(context.Request, adminToken!)
+        || MediaStreamSigner.IsValidContentUrl(context.Request, adminToken!))
     {
         if (AdminTokenAuth.HasBearerToken(context.Request))
         {
@@ -314,6 +315,8 @@ app.Use(async (context, next) =>
     }
 });
 app.MapHealthEndpoints(adminToken, configDirectory);
+
+app.MapStreamSigningEndpoints(adminToken);
 
 app.MapSystemEndpoints();
 
