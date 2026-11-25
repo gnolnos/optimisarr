@@ -1,0 +1,64 @@
+name: Publish ghcr server image
+
+# Builds the Optimisarr server image from this fork and publishes it to
+# ghcr.io/gnolnos/optimisarr so an Unraid box can pull it directly.
+# The `unraid` tag is what the Unraid template (unraid/optimisarr.xml) references.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, 'deploy/*']
+    # Docs, the Unraid template, and CI files never end up in the image, so touching them does
+    # not need an image rebuild (any code path below still does).
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'unraid/**'
+      - 'ca_profile.xml'
+      - '.github/**'
+    tags: ['v*']
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ghcr-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set short SHA tag
+        id: tags
+        run: echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          # `unraid` is the stable tag the Unraid template pulls; the SHA tag keeps
+          # exact rebuilds identifiable.
+          tags: |
+            ${{ env.IMAGE_NAME }}:unraid
+            ${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
