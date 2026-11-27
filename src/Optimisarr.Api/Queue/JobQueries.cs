@@ -140,6 +140,10 @@ public static class JobQueries
         {
             query = query.Where(job => job.Status == status);
         }
+        if (filter.Id is { } id)
+        {
+            query = query.Where(job => job.Id == id);
+        }
         if (filter.LibraryId is { } libraryId)
         {
             query = query.Where(job => job.LibraryId == libraryId);
@@ -493,6 +497,9 @@ public sealed record FailureGroupDto(
 public sealed record JobQuery
 {
     public JobStatus? Status { get; init; }
+
+    /// <summary>One job by its id, so a caller holding an id gets the same row the feed builds.</summary>
+    public int? Id { get; init; }
 
     /// <summary>
     /// Restrict to jobs with work outstanding — see <c>JobQueries.InProgressStatuses</c>. Combines

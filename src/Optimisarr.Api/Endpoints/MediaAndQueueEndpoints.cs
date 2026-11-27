@@ -427,6 +427,39 @@ internal static class MediaAndQueueEndpoints
         .WithName("ListJobs")
         .Produces<IReadOnlyList<JobDto>>();
 
+        // One job, shaped exactly like an element of the feed above, for a client that holds a job
+        // id and should not have to read the whole queue to refresh it. The same builder runs, so
+        // the two can never drift apart. 404 when there is no such job (a preview is not a queue
+        // job, and the feed does not list one either).
+        app.MapGet("/api/jobs/{id:int}", async (
+            int id,
+            OptimisarrDbContext db,
+            SettingsStore settingsStore,
+            RemoteWorkersFeature remoteWorkers,
+            ReplacementCoordinator replacementCoordinator,
+            QueueDispatcher dispatcher,
+            CancellationToken cancellationToken) =>
+        {
+            var queueSettings = await settingsStore.GetQueueSettingsAsync(cancellationToken);
+            var availability = await WorkerAvailability.ResolveAsync(
+                db, queueSettings.RemoteWorkersEnabled, remoteWorkers, DateTimeOffset.UtcNow, cancellationToken);
+            var result = await JobQueries.QueryAsync(db, new JobQuery { Id = id }, cancellationToken, availability);
+            if (result.Items.Count == 0)
+            {
+                return ApiErrors.NotFound("job.notFound", $"No job with id {id}.", new { id });
+            }
+
+            var job = result.Items[0];
+            return Results.Ok(job with
+            {
+                Finalizing = replacementCoordinator.IsActive(job.Id),
+                WaitingForResources = job.Status == nameof(JobStatus.Queued) && dispatcher.IsLocallyHeldForCapacity(job.Id, job.ExecutionAttempt)
+            });
+        })
+        .WithName("GetJob")
+        .Produces<JobDto>()
+        .Produces<ApiError>(StatusCodes.Status404NotFound);
+
         // Diagnostics: failed jobs grouped by classified reason (size-saving, container incompatibility,
         // replacement collision, …) with counts and recent samples, so "why are jobs failing?" is answerable
         // from the API without reading container logs. Optionally scoped to one library.

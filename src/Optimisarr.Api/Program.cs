@@ -283,7 +283,11 @@ app.Use(async (context, next) =>
         return;
     }
 
-    if (AdminTokenAuth.IsAuthorized(context.Request, adminToken!))
+    // A signed content URL is the second way in, and only for the one media path it names: a
+    // native player cannot send the bearer header, so the app signs that path first (see
+    // MediaStreamSigner). Everything else still needs the token, the hub query or the session.
+    if (AdminTokenAuth.IsAuthorized(context.Request, adminToken!)
+        || MediaStreamSigner.IsSignedContentRequest(context.Request, adminToken!))
     {
         if (AdminTokenAuth.HasBearerToken(context.Request))
         {
@@ -322,6 +326,8 @@ app.Use(async (context, next) =>
     }
 });
 app.MapHealthEndpoints(adminToken, configDirectory);
+
+app.MapStreamSignEndpoints(adminToken);
 
 app.MapSystemEndpoints();
 

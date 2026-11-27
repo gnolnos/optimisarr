@@ -70,6 +70,34 @@ successful bearer-authenticated API request also establishes a derived HttpOnly,
 same-site session cookie so native browser media requests can authenticate
 without placing the admin token in their URLs.
 
+A native media player (iOS AVPlayer, Android ExoPlayer) cannot send headers at
+all. For those, `GET /api/stream/sign` returns a short-lived signed URL to one
+`/api/…/content` path, which the player can open with no header: see
+[Signed media URLs](#signed-media-urls).
+
+## Signed media URLs
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/stream/sign` | Sign one relative `/api/…/content` media path. `path` is required. Returns `{ "url": "…?exp=…&sig=…" }`: the same relative path with query authentication valid for 15 minutes. `400` (`stream.sign.pathInvalid`) for anything that is not a relative `/api/…/content` path. |
+
+Signing needs the admin token like any other protected route; the signed URL it
+returns does not, so a native player can open it with no header:
+
+```bash
+curl -fsS -H "Authorization: Bearer change...oken" \
+  "http://localhost:8787/api/stream/sign?path=/api/replacements/3/original/content"
+# { "url": "/api/replacements/3/original/content?exp=1723000000&sig=..." }
+```
+
+The signature is an HMAC over that exact path and that exact expiry, so a signed
+URL opens one file until it expires and nothing else: it never carries the admin
+token, and a signature minted for one path is refused on any other. Rotating the
+admin token invalidates every outstanding signed URL. Content routes keep
+accepting the admin token, the session cookie and the hub's `access_token`
+exactly as before, and no other route accepts a signed query. When no admin
+token is configured, the endpoint returns the path unchanged.
+
 ## Common Recipes
 
 ### Check Whether Optimisarr Is Ready
@@ -540,6 +568,7 @@ otherwise timing can become a side channel. Submit exactly one `Indistinguishabl
 | `POST` | `/api/queue/resume` | Resume suspended transcodes, then reopen dispatch and automatic replacement. |
 | `GET` | `/api/jobs` | List queue jobs. Optional filters `status`, `libraryId`, `category`, `since`, `until`, and paging `page`/`pageSize`. |
 | `GET` | `/api/jobs?status=Failed` | List jobs filtered by status. |
+| `GET` | `/api/jobs/{id}` | One job, in the same shape as a row of `/api/jobs`. `404` when there is no such job. |
 | `GET` | `/api/jobs/failures` | Failure summary for normal work and failed preview/personal-quality comparisons. Optional `libraryId` scopes it to one library. Samples identify `jobType` and include structured failed `verificationChecks` (`name`, `outcome`, and measured `detail`). |
 | `GET` | `/api/jobs/{id}/log` | FFmpeg/process log for a failed job (plain text; `404` when none was captured). |
 | `GET` | `/api/playback/{key}/artwork` | Private, uncached artwork for a current playback hold. Use its opaque `artworkUrl` from queue status; `404` when unavailable. |

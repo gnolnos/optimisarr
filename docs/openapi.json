@@ -6792,6 +6792,17 @@
         ],
         "type": "object"
       },
+      "SignedStreamUrl": {
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      },
       "SizeBudgetExceededRequest": {
         "properties": {
           "observedBytes": {
@@ -9504,6 +9515,49 @@
         "tags": [
           "Queue"
         ]
+      },
+      "get": {
+        "operationId": "GetJob",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Admin token required when OPTIMISARR_ADMIN_TOKEN is set on the server."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        },
+        "tags": [
+          "Queue"
+        ]
       }
     },
     "/api/jobs/{id}/accept-below-target": {
@@ -12007,6 +12061,48 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "401": {
+            "description": "Admin token required when OPTIMISARR_ADMIN_TOKEN is set on the server."
+          }
+        },
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/api/stream/sign": {
+      "get": {
+        "operationId": "SignStreamUrl",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignedStreamUrl"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Bad Request"
           },
           "401": {
             "description": "Admin token required when OPTIMISARR_ADMIN_TOKEN is set on the server."
