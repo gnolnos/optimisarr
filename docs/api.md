@@ -85,7 +85,8 @@ Signing needs the admin token like any other protected route; the signed URL it
 returns does not, so a native player can open it with no header:
 
 ```bash
-curl -fsS -H "Authorization: Bearer change...oken" \
+AUTH_HEADER="Authorization: Bearer ${OPTIMISARR_ADMIN_TOKEN:?set the admin token}"
+curl -fsS -H "$AUTH_HEADER" \
   "http://localhost:8787/api/stream/sign?path=/api/replacements/3/original/content"
 # { "url": "/api/replacements/3/original/content?exp=1723000000&sig=..." }
 ```
