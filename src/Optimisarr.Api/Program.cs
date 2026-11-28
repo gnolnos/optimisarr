@@ -198,6 +198,8 @@ builder.Services.AddSingleton<QueueDispatcher>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<QueueDispatcher>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<BlindCalibrationService>());
 builder.Services.AddHostedService<SystemMetricsBroadcaster>();
+builder.Services.AddSingleton<HostMetricsService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<HostMetricsService>());
 builder.Services.AddHostedService<TimedCleanupWorker>();
 builder.Services.AddHostedService<AutoEnqueueWorker>();
 builder.Services.AddHostedService<LibraryScanWorker>();

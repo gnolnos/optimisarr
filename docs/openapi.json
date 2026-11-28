@@ -12138,6 +12138,22 @@
         ]
       }
     },
+    "/api/system/metrics": {
+      "get": {
+        "operationId": "SystemMetrics",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Admin token required when OPTIMISARR_ADMIN_TOKEN is set on the server."
+          }
+        },
+        "tags": [
+          "System"
+        ]
+      }
+    },
     "/api/system/realcugan": {
       "get": {
         "operationId": "GetRealCuganStatus",

@@ -27,6 +27,20 @@ internal static class SystemEndpoints
 {
     public static void MapSystemEndpoints(this WebApplication app)
     {
+        // The server's own live CPU/GPU load (the host card above the worker list). Sampled
+        // continuously by HostMetricsService; null CPU/GPU = this machine reports none.
+        app.MapGet("/api/system/metrics", (HostMetricsService host) => Results.Ok(new
+        {
+            hostName = host.HostName,
+            operatingSystem = host.OperatingSystem,
+            architecture = host.Architecture,
+            cpuPercent = host.CpuPercent,
+            gpuSupported = host.GpuPercent is not null,
+            gpuPercent = host.GpuPercent,
+            gpuEngine = host.GpuEngine,
+        }))
+        .WithName("SystemMetrics");
+
         app.MapGet("/api/system/tools", async (
             ToolDetectionService tools,
             CancellationToken cancellationToken) =>

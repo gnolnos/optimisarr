@@ -61,6 +61,22 @@ public sealed class LinuxSystemMetrics
         return nvidia is { } nvidiaPercent ? (nvidiaPercent, "GPU") : null;
     }
 
+    // Whole-machine GPU utilisation, vendor-neutral and unprivileged. Unlike
+    // <see cref="ReadGpuAsync"/> — which is per-encode-process (DRM fdinfo of our ffmpeg children)
+    // and therefore only live while an encode runs — this is the whole accelerator's utilisation,
+    // so a "server load" card stays live even when nothing is being encoded.
+    public async Task<(double Percent, string? Engine)?> ReadSystemGpuAsync(CancellationToken token)
+    {
+        var amd = SampleAmd();
+        if (amd is { } amdPercent)
+        {
+            return (amdPercent, "GPU");
+        }
+
+        var nvidia = await SampleNvidiaAsync(token);
+        return nvidia is { } nvidiaPercent ? (nvidiaPercent, "GPU") : null;
+    }
+
     // Per-process DRM fdinfo: read the engine busy-nanosecond counters of our own ffmpeg
     // children and diff them per client between samples. New clients contribute nothing until
     // their next sample (no baseline), which avoids a spike when an encode starts. Driver-agnostic
