@@ -56,7 +56,8 @@ Update sidecars alongside the server. H.264 NVIDIA jobs that preserve a declared
 colour range require worker protocol 5; an older sidecar stays available for
 ordinary work and reports that an update is needed for those jobs. Timed-text
 subtitle conversion to Matroska requires protocol 4. MP4 timing corrections and strict decoded-picture evidence require protocol 9. Jobs from a library with a
-[keyframe interval](configuration.md#keyframe-interval) require protocol 15. Unsupported commands are
+[keyframe interval](configuration.md#keyframe-interval) require protocol 15. AMD AMF encodes require
+protocol 16; an older worker that proved AMF keeps receiving work for its other encoders. Unsupported commands are
 held before a lease is issued, rather than sent to the worker to fail.
 
 When upgrading from 0.2.24, update the sidecars alongside the server. With **Verify entirely on the
@@ -81,8 +82,20 @@ Jobs without a bounded candidate, adaptive searches, and jobs that cannot reserv
 disk use the normal disk folder. The monitor reports the actual storage and fallback reason.
 Source downloads stream directly to working storage without a temporary download file.
 
-The Windows sidecar currently uses a disk folder (`C:\OptimisarrWork`, overridable with
-`OPTIMISARR_SIDECAR_WORK`). It does not create or manage RAM disks.
+The Windows sidecar works in `C:\OptimisarrWork` unless an administrator moves it with the
+`work-location` file under `%ProgramData%\Optimisarr\Sidecar` or the `OPTIMISARR_SIDECAR_WORK`
+variable. It does not create or manage RAM disks, but it can work on a RAM drive you mount
+yourself, whose size then limits the jobs it is offered. A configured location that cannot be used,
+or a RAM drive that is missing, stops the worker taking jobs instead of falling back to `C:`. The
+work folder is for SYSTEM and Administrators only: the service creates it that way, deletes and
+recreates one it created before that other accounts can change, and refuses one holding anyone
+else's files or owned by another account, a folder reached through a link, or one on a FAT or exFAT
+drive unless an administrator accepts that risk; see
+[work directory and RAM scratch](../../sidecars/windows/README.md#work-directory-and-ram-scratch).
+It takes one job at a time unless `OPTIMISARR_SIDECAR_CONCURRENCY` allows up to four; see
+[running more than one job](../../sidecars/windows/README.md#running-more-than-one-job-at-a-time).
+Each concurrent job holds its working-space estimate, so jobs that fit alone but not together are
+handed back rather than started.
 
 The Linux container uses `/work`, backed by disk or an operator-mounted bounded tmpfs. It has no
 automatic disk fallback or shared RAM reservation manager; see
